@@ -203,6 +203,10 @@
     .btn-primary {
       background: linear-gradient(135deg, var(--accent), var(--accent-2));
       color: white;
+      width: 100%;
+      justify-content: center;
+      font-size: 16px;
+      padding: 14px 18px;
     }
 
     .btn-primary:hover { transform: translateY(-1px); }
@@ -232,6 +236,35 @@
       background: #fef2f2;
       border-color: #fecaca;
       color: #b91c1c;
+    }
+
+    .zip-download-wrap {
+      margin: 0 0 22px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .zip-download-btn {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #1f2937;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    .zip-download-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .zip-download-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
     }
 
     .preview-section,
@@ -305,6 +338,9 @@
       background: #fff;
       color: #334155;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .howto-grid {
@@ -441,6 +477,10 @@
       <div id="previewGrid" class="preview-grid"></div>
     </section>
 
+    <div class="zip-download-wrap">
+      <button id="downloadZipBtn" class="zip-download-btn" type="button" disabled>上記画像をまとめてZIPファイルでダウンロード</button>
+    </div>
+
     <section class="howto-section panel">
       <h2>ツールの使い方</h2>
       <div class="howto-grid">
@@ -466,10 +506,12 @@
   <footer class="footer container">
     © <span id="year"></span> アイキャッチ画像ジェネレーター
   </footer>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script>
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
     const processBtn = document.getElementById('processBtn');
+    const downloadZipBtn = document.getElementById('downloadZipBtn');
     const previewGrid = document.getElementById('previewGrid');
     const statusBox = document.getElementById('status');
 
@@ -517,6 +559,7 @@
       state.files = imageFiles;
       state.results = [];
       previewGrid.innerHTML = '';
+      downloadZipBtn.disabled = true;
       setStatus(`${imageFiles.length}件の画像を読み込みました。設定を確認して「一括変換する」を押してください。`, 'ok');
     }
 
@@ -615,7 +658,7 @@
           <p class="file-meta">${result.width} × ${result.height} / ${(result.blob.size / 1024).toFixed(1)} KB</p>
           <div class="card-actions">
             <a href="${imageUrl}" download="${result.outputName}">ダウンロード</a>
-            <button type="button" data-remove-index="${index}">削除してやり直す</button>
+            <button type="button" data-remove-index="${index}">削除</button>
           </div>
         </div>
       `;
@@ -635,6 +678,7 @@
       state.results.forEach((result, index) => {
         previewGrid.appendChild(createPreviewCard(result, index));
       });
+      downloadZipBtn.disabled = state.results.length === 0;
     }
 
     async function processImages() {
@@ -677,7 +721,38 @@
       }
     }
 
+
+    async function downloadAllAsZip() {
+      if (!state.results.length) {
+        setStatus('ダウンロードできる変換結果がありません。', 'error');
+        return;
+      }
+
+      try {
+        downloadZipBtn.disabled = true;
+        setStatus('ZIPファイルを作成しています…');
+        const zip = new JSZip();
+        state.results.forEach(item => zip.file(item.outputName, item.blob));
+        const content = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'eyecatch_images.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setStatus('ZIPダウンロードを開始しました。', 'ok');
+      } catch (error) {
+        console.error(error);
+        setStatus('ZIP作成中にエラーが発生しました。', 'error');
+      } finally {
+        downloadZipBtn.disabled = state.results.length === 0;
+      }
+    }
+
     processBtn.addEventListener('click', processImages);
+    downloadZipBtn.addEventListener('click', downloadAllAsZip);
   </script>
 </body>
 </html>
