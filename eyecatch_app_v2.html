@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>アイキャッチ画像ジェネレーター | 複数画像を一括クロップ</title>
+  <meta name="description" content="画像をドラッグ＆ドロップして、指定サイズに中央基準で一括クロップできる無料ツール。700×150pxのアイキャッチ画像をまとめて作成可能。PNG/JPG/WEBP対応。" />
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --line: #dbe3ef;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-2: #1d4ed8;
+      --ok: #0f766e;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); }
+
+    .container {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 40px 0 28px;
+    }
+
+    .hero-inner {
+      background: linear-gradient(135deg, #e8f0ff 0%, #f8fbff 45%, #eef4ff 100%);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      padding: 34px 28px;
+      display: grid;
+      gap: 16px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-inner::after {
+      content: "";
+      position: absolute;
+      inset: auto -60px -60px auto;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(37,99,235,0.10) 0%, rgba(37,99,235,0) 70%);
+      pointer-events: none;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: clamp(15px, 2vw, 18px);
+      max-width: 860px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 0.9fr;
+      gap: 22px;
+      align-items: start;
+      margin-bottom: 28px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .dropzone {
+      border: 2px dashed #9db7ea;
+      border-radius: 20px;
+      padding: 28px;
+      min-height: 320px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.95), rgba(243,247,255,0.95)),
+        repeating-linear-gradient(45deg, rgba(37,99,235,0.025), rgba(37,99,235,0.025) 10px, rgba(255,255,255,0.025) 10px, rgba(255,255,255,0.025) 20px);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      transition: 0.2s ease;
+      cursor: pointer;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: linear-gradient(180deg, #ffffff, #eef4ff);
+      transform: translateY(-1px);
+    }
+
+    .dropzone-icon {
+      font-size: 44px;
+      margin-bottom: 10px;
+    }
+
+    .dropzone strong {
+      display: block;
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .hidden-input {
+      display: none;
+    }
+
+    .settings-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #344256;
+    }
+
+    .inline-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    input[type="number"],
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid #cfd8e6;
+      background: #fff;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #8eb0f6;
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+    }
+
+    .setting-help {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+    }
+
+    .btn-primary:hover { transform: translateY(-1px); }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      background: #f8fafc;
+      border: 1px solid #e5edf7;
+      color: #475569;
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .status.ok {
+      background: #ecfdf5;
+      border-color: #bbf7d0;
+      color: var(--ok);
+    }
+
+    .status.error {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #b91c1c;
+    }
+
+    .preview-section,
+    .howto-section,
+    .notes-section {
+      margin-bottom: 28px;
+    }
+
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .preview-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 0;
+      overflow: visible;
+      box-shadow: var(--shadow);
+    }
+
+    .preview-card img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 700 / 150;
+      object-fit: cover;
+      background: #edf2f7;
+      border-radius: 0;
+    }
+
+    .preview-card-body {
+      padding: 14px;
+    }
+
+    .file-name {
+      font-size: 14px;
+      font-weight: 700;
+      word-break: break-all;
+      margin: 0 0 6px;
+    }
+
+    .file-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 10px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .card-actions a,
+    .card-actions button {
+      text-decoration: none;
+      font-size: 13px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: #334155;
+      cursor: pointer;
+    }
+
+    .howto-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .step {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .step-num {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #e8f0ff;
+      color: #1d4ed8;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .footer {
+      padding: 14px 0 40px;
+      color: #64748b;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .main-grid,
+      .howto-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: min(100% - 20px, 1200px);
+      }
+      .panel,
+      .hero-inner {
+        padding: 18px;
+      }
+      .inline-2,
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+      .dropzone {
+        min-height: 260px;
+        padding: 22px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <h1>アイキャッチ画像ジェネレーター</h1>
+        <p class="lead">画像をドラッグ＆ドロップするだけでアイキャッチ画像を生成できます。</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+<section class="main-grid">
+      <div class="panel">
+        <h2>画像をアップロード</h2>
+        <div id="dropzone" class="dropzone" role="button" tabindex="0" aria-label="画像をアップロード">
+          <div>
+            <div class="dropzone-icon">🖼️</div>
+            <strong>ここに画像をドラッグ＆ドロップ</strong>
+            <div class="muted">またはクリックして複数画像を選択</div>
+            <div class="muted" style="margin-top:10px;">対応形式：JPG / PNG / WEBP / GIF / BMP など（ブラウザで読み込める画像）</div>
+          </div>
+        </div>
+        <input id="fileInput" class="hidden-input" type="file" accept="image/*" multiple />
+        <div id="status" class="status">まだ画像は読み込まれていません。</div>
+      </div>
+
+      <aside class="panel">
+        <h2>詳細設定</h2>
+        <div class="settings-grid">
+          <div class="field">
+            <label for="targetWidth">クロップ後のサイズ</label>
+            <div class="inline-2">
+              <input id="targetWidth" type="number" min="1" step="1" value="700" />
+              <input id="targetHeight" type="number" min="1" step="1" value="150" />
+            </div>
+            <div class="setting-help">例：700 × 150、1200 × 630、1600 × 400 など。中央基準で比率合わせ → その後リサイズします。</div>
+          </div>
+
+          <div class="field">
+            <label for="suffix">変換後ファイル名の末尾</label>
+            <input id="suffix" type="text" value="_eyecatch" />
+            <div class="setting-help">元のファイル名の後ろに付けます。例：sample_eyecatch.webp</div>
+          </div>
+
+          <div class="field">
+            <label for="format">出力形式</label>
+            <select id="format">
+              <option value="image/jpeg" selected>JPG</option>
+              <option value="image/png">PNG</option>
+              <option value="image/webp">WEBP</option>
+            </select>
+            <div class="setting-help">写真中心ならJPG/WEBP、文字や図形が多いならPNGが向いています。</div>
+          </div>
+
+          <div class="field">
+            <label for="quality">画質（0.5: 節約 / 1: 最高画質）</label>
+            <input id="quality" type="number" min="0.5" max="1" step="0.05" value="0.8" />
+            <div class="setting-help">JPG / WEBPで有効です。PNGでは無視されます。</div>
+          </div>
+
+          <div class="button-row">
+            <button id="processBtn" class="btn-primary">一括変換する</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="preview-section">
+      <div class="preview-head">
+        <h2 style="margin:0; font-size:22px;">変換結果プレビュー</h2>
+        <div class="muted">各画像を個別ダウンロードできます。</div>
+      </div>
+      <div id="previewGrid" class="preview-grid"></div>
+    </section>
+
+    <section class="howto-section panel">
+      <h2>ツールの使い方</h2>
+      <div class="howto-grid">
+        <div class="step">
+          <div class="step-num">1</div>
+          <strong>画像をまとめて入れる</strong>
+          <p>左の窓に画像をドラッグ＆ドロップするか、クリックして複数選択します。ブログ用の素材を一気に処理できます。</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <strong>サイズ・名前・形式を決める</strong>
+          <p>クロップ後のサイズ、ファイル名の末尾、出力形式、画質を調整します。デフォルトは 700×150px / _eyecatch / JPG / 0.8 です。</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <strong>一括変換して保存</strong>
+          <p>「一括変換する」を押すと、中央基準で比率を合わせた上でリサイズします。完成後は各画像を個別に保存できます。</p>
+        </div>
+      </div>
+    </section>
+</main>
+
+  <footer class="footer container">
+    © <span id="year"></span> アイキャッチ画像ジェネレーター
+  </footer>
+  <script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const processBtn = document.getElementById('processBtn');
+    const previewGrid = document.getElementById('previewGrid');
+    const statusBox = document.getElementById('status');
+
+    const widthInput = document.getElementById('targetWidth');
+    const heightInput = document.getElementById('targetHeight');
+    const suffixInput = document.getElementById('suffix');
+    const formatSelect = document.getElementById('format');
+    const qualityInput = document.getElementById('quality');
+
+    const state = {
+      files: [],
+      results: []
+    };
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function setStatus(message, type = '') {
+      statusBox.className = 'status' + (type ? ' ' + type : '');
+      statusBox.textContent = message;
+    }
+
+    function sanitizeBaseName(name) {
+      return name.replace(/\.[^.]+$/, '');
+    }
+
+    function getExtension(mime) {
+      if (mime === 'image/jpeg') return 'jpg';
+      if (mime === 'image/png') return 'png';
+      if (mime === 'image/webp') return 'webp';
+      return 'png';
+    }
+
+    function clampQuality(value) {
+      const n = Number(value);
+      if (Number.isNaN(n)) return 0.8;
+      return Math.min(1, Math.max(0.5, n));
+    }
+
+    function updateFileState(newFiles) {
+      const imageFiles = Array.from(newFiles).filter(file => file.type.startsWith('image/'));
+      if (!imageFiles.length) {
+        setStatus('画像ファイルが見つかりませんでした。', 'error');
+        return;
+      }
+      state.files = imageFiles;
+      state.results = [];
+      previewGrid.innerHTML = '';
+      setStatus(`${imageFiles.length}件の画像を読み込みました。設定を確認して「一括変換する」を押してください。`, 'ok');
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => updateFileState(e.target.files));
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => updateFileState(e.dataTransfer.files));
+
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error(`${file.name} の読み込みに失敗しました。`));
+        };
+        img.src = url;
+      });
+    }
+
+    function cropAndResize(img, targetWidth, targetHeight, mime, quality) {
+      const targetRatio = targetWidth / targetHeight;
+      const srcWidth = img.naturalWidth;
+      const srcHeight = img.naturalHeight;
+      const srcRatio = srcWidth / srcHeight;
+
+      let sx = 0;
+      let sy = 0;
+      let sw = srcWidth;
+      let sh = srcHeight;
+
+      if (srcRatio > targetRatio) {
+        sw = srcHeight * targetRatio;
+        sx = (srcWidth - sw) / 2;
+      } else {
+        sh = srcWidth / targetRatio;
+        sy = (srcHeight - sh) / 2;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetWidth, targetHeight);
+
+      return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('画像の変換に失敗しました。'));
+            return;
+          }
+          resolve({ blob, width: targetWidth, height: targetHeight });
+        }, mime, mime === 'image/png' ? undefined : quality);
+      });
+    }
+
+    function createPreviewCard(result, index) {
+      const card = document.createElement('div');
+      card.className = 'preview-card';
+
+      const imageUrl = URL.createObjectURL(result.blob);
+
+      card.innerHTML = `
+        <img src="${imageUrl}" alt="${result.outputName}">
+        <div class="preview-card-body">
+          <p class="file-name">${result.outputName}</p>
+          <p class="file-meta">${result.width} × ${result.height} / ${(result.blob.size / 1024).toFixed(1)} KB</p>
+          <div class="card-actions">
+            <a href="${imageUrl}" download="${result.outputName}">ダウンロード</a>
+            <button type="button" data-remove-index="${index}">削除してやり直す</button>
+          </div>
+        </div>
+      `;
+
+      const removeBtn = card.querySelector('[data-remove-index]');
+      removeBtn.addEventListener('click', () => {
+        URL.revokeObjectURL(imageUrl);
+        state.results.splice(index, 1);
+        renderResults();
+      });
+
+      return card;
+    }
+
+    function renderResults() {
+      previewGrid.innerHTML = '';
+      state.results.forEach((result, index) => {
+        previewGrid.appendChild(createPreviewCard(result, index));
+      });
+    }
+
+    async function processImages() {
+      const targetWidth = Number(widthInput.value);
+      const targetHeight = Number(heightInput.value);
+      const suffix = suffixInput.value || '_eyecatch';
+      const mime = formatSelect.value;
+      const quality = clampQuality(qualityInput.value);
+
+      if (!state.files.length) {
+        setStatus('先に画像をアップロードしてください。', 'error');
+        return;
+      }
+      if (!Number.isInteger(targetWidth) || !Number.isInteger(targetHeight) || targetWidth <= 0 || targetHeight <= 0) {
+        setStatus('サイズは1以上の整数で入力してください。', 'error');
+        return;
+      }
+
+      processBtn.disabled = true;
+      state.results = [];
+      previewGrid.innerHTML = '';
+      setStatus(`変換中… ${state.files.length}件の画像を処理しています。`);
+
+      try {
+        for (let i = 0; i < state.files.length; i++) {
+          const file = state.files[i];
+          const img = await loadImage(file);
+          const { blob, width, height } = await cropAndResize(img, targetWidth, targetHeight, mime, quality);
+          const outputName = `${sanitizeBaseName(file.name)}${suffix}.${getExtension(mime)}`;
+          state.results.push({ outputName, blob, width, height });
+          setStatus(`変換中… ${i + 1} / ${state.files.length} 完了`);
+        }
+        renderResults();
+        setStatus(`${state.results.length}件の画像変換が完了しました。`, 'ok');
+      } catch (error) {
+        console.error(error);
+        setStatus(error.message || '変換中にエラーが発生しました。', 'error');
+      } finally {
+        processBtn.disabled = false;
+      }
+    }
+
+    processBtn.addEventListener('click', processImages);
+  </script>
+</body>
+</html>
